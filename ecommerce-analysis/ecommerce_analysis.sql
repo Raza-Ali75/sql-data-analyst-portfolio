@@ -3,15 +3,13 @@
 Calculate monthly revenue trend.
 Show MoM (Month-over-Month) growth percentage.
 ============================================================================== */
----- Monthly Revenue growth
-
-
+---- Monthly Revenue and  growth percentage
 WITH monthly_revenue AS (  --creating common table expresion that live inside our query
     SELECT 
-        MONTH(order_date) AS month,
+        datetrunc(order_date) AS month,
         SUM(total_amount) AS total_sales
     FROM orders
-    GROUP BY MONTH(order_date)
+    GROUP BY datetrunc(order_date)
 )
 
 SELECT *,
@@ -27,24 +25,37 @@ Find Top 3 products per category by revenue.
 Find products selling below their cost (loss-making).
 ============================================================================== */
 
+
+--Find Top 3 products per category by revenue.
 select*
 from(
-  select
-  product_id,
-  category,
-  revenue,
-  rank() over(partition by category order by revenue desc)rank
-  from(
     select
-    p.product_id,
-    p.category,
-    SUM(o.quantity*o.price_per_unit) as revenue
-    from products p
-    left join order_items o
-    on p.product_id=o.product_id
-    group by p.product_id,p.category)t)t
+      product_id,
+      category,
+      revenue,
+      rank() over(partition by category order by revenue desc)rank
+    from(
+      select
+        p.product_id,
+        p.category,
+        SUM(o.quantity*o.price_per_unit) as revenue
+      from products p
+      left join order_items o
+      on p.product_id=o.product_id
+      group by p.product_id,p.category)t)t
 where rank<=3 --filtering Top 3 products per category by revenue
 
+--Finding products selling below their cost (loss-making)
+select
+o.product_id,
+
+sum((o.price_per_unit-p.cost_price)*quantity) profit
+
+from order_items o
+left join products p
+on o.product_id=p.product_id
+group by o.product_id
+having sum((o.price_per_unit-p.cost_price)*quantity) <=0
 /* ==============================================================================
    Customer Behavior
 Calculate Customer Lifetime Value (CLV).
