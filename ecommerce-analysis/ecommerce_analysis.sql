@@ -64,5 +64,30 @@ Rank customers by total spending.
 ============================================================================== */
 
 
+--Calculate Customer Lifetime Value (CLV).
+with CLV_table as(--temprary table 
+  select
+    customer_id,
+    count(distinct order_id) total_orders,
+    sum(revenue) total_revenue,
+    round(cast(sum(revenue) as float)/count(distinct order_id),2) avg_order_value
+  from(
+    select
+      t.order_id,
+      o.customer_id,
+      t.quantity*t.price_per_unit revenue
+    from order_items t
+    left join  orders o
+    on t.order_id=o.order_id)t
+    group by customer_id
+  )
+
+--ranked clv table by total spending
+select*,
+dense_rank() over(order by total_revenue desc) as Rank
+from CLV_table
+
+--Find repeat customers.
+
 
 
