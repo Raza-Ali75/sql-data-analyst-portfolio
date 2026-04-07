@@ -88,6 +88,60 @@ dense_rank() over(order by total_revenue desc) as Rank
 from CLV_table
 
 --Find repeat customers.
+/* ==============================================================================
+--Business Insight
+Which city generates highest revenue per customer?
+Find revenue contribution % per category.
+============================================================================== */
 
+--Which city generates highest revenue per customer?
+
+  --first I create table with customer_id , city ,revenue by combining table orders->order_items-.customers 
+  --then i used group by for the result
+
+with table1 as(
+	select
+		c.customer_id,
+		c.city,
+		t.revenue
+	from (
+		select
+			o.order_id,
+			o.customer_id,
+			ot.quantity*price_per_unit revenue
+		from orders o
+		left join order_items ot
+		on o.order_id=ot.order_id)t
+		left join customers c
+		on c.customer_id=t.customer_id
+	)
+
+select
+	city,
+	sum(revenue)/COUNT(distinct customer_id) per_cx_revenue
+from table1
+group by city
+order by sum(revenue)/COUNT(distinct customer_id) desc
+
+--Find revenue contribution % per category.
+
+with revenue_table as(
+
+select
+p.category,
+sum(o.quantity*o.price_per_unit) revenue_by_category
+from order_items o
+inner join products p
+on o.product_id=p.product_id
+group by p.category
+)
+
+select
+category,
+concat(round(cast(revenue_by_category as float)/sum(revenue_by_category) over()*100,2),'%') revenue_percent
+  --remove concat if you used in excel or tableu visualization
+from revenue_table
+
+--I calculated category-wise revenue and used a window function to compute each category’s percentage contribution to total revenue
 
 
