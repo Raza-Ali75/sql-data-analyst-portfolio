@@ -144,4 +144,35 @@ from revenue_table
 
 --I calculated category-wise revenue and used a window function to compute each category’s percentage contribution to total revenue
 
+/* ==============================================================================
+--Advanced Thinking
+Calculate running total revenue over time.
 
+Create customer retention analysis (basic cohort logic).
+============================================================================== */
+--Create customer retention analysis (basic cohort logic).
+with table1 as(
+select
+customer_id,
+
+DATETRUNC(month,min(order_date)) cohort_month
+from orders
+group by  customer_id)
+,
+ table2 as (
+select
+t.customer_id,
+DATETRUNC(month,o.order_date) order_month, 
+t.cohort_month 
+from orders o
+join table1 t
+on t.customer_id=o.customer_id
+)
+
+select
+cohort_month,
+order_month,
+count(distinct customer_id) cx_count,
+round(cast((count(distinct customer_id)) as float)/FIRST_VALUE(count(distinct customer_id)) over(partition by cohort_month order by cohort_month)*100,2) retention_rate
+from table2
+group by cohort_month,order_month
