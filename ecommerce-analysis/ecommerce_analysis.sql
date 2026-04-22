@@ -153,26 +153,41 @@ Create customer retention analysis (basic cohort logic).
 --Create customer retention analysis (basic cohort logic).
 with table1 as(
 select
-customer_id,
-
-DATETRUNC(month,min(order_date)) cohort_month
+	customer_id,
+	
+	DATETRUNC(month,min(order_date)) cohort_month
 from orders
 group by  customer_id)
 ,
  table2 as (
 select
-t.customer_id,
-DATETRUNC(month,o.order_date) order_month, 
-t.cohort_month 
+	t.customer_id,
+	DATETRUNC(month,o.order_date) order_month, 
+	t.cohort_month 
 from orders o
 join table1 t
 on t.customer_id=o.customer_id
 )
 
 select
-cohort_month,
-order_month,
-count(distinct customer_id) cx_count,
-round(cast((count(distinct customer_id)) as float)/FIRST_VALUE(count(distinct customer_id)) over(partition by cohort_month order by cohort_month)*100,2) retention_rate
+	cohort_month,
+	order_month,
+	count(distinct customer_id) cx_count,
+	round(cast((count(distinct customer_id)) as float)/FIRST_VALUE(count(distinct customer_id)) over(partition by cohort_month order by cohort_month)*100,2) retention_rate
 from table2
 group by cohort_month,order_month
+
+
+--Calculate running total revenue over time. 
+
+select
+	o.order_id,
+	o.order_date,
+	sum(t.revenue) over(order by order_date rows between unbounded preceding and current row) running_total
+from orders o
+join (
+	select
+		order_id,
+		quantity*price_per_unit as revenue
+	from order_items)t--NOTE:-orders_items table should have unique order_id for accurate result other wise use group by.
+on t.order_id=o.order_id
